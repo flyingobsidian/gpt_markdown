@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../utils/test_helpers.dart';
 
@@ -8,6 +9,9 @@ void main() {
         await pumpMarkdown(tester, '<span style="color:red">red text</span>');
         final output = getSerializedOutput(tester);
         expect(output, contains('red text'));
+
+        // Verify a RichText widget was created (indicating styling was applied)
+        expect(find.byType(RichText), findsWidgets);
       });
 
       testWidgets('span with background-color', (tester) async {
@@ -21,6 +25,7 @@ void main() {
         final output = getSerializedOutput(tester);
         expect(output, contains('bold text'));
         expect(output, contains('[bold]'));
+        expect(find.byType(RichText), findsWidgets);
       });
 
       testWidgets('span with font-style: italic', (tester) async {
@@ -28,6 +33,7 @@ void main() {
         final output = getSerializedOutput(tester);
         expect(output, contains('italic text'));
         expect(output, contains('[italic]'));
+        expect(find.byType(RichText), findsWidgets);
       });
     });
 
@@ -37,6 +43,9 @@ void main() {
         final output = getSerializedOutput(tester);
         expect(output, contains('blue bold'));
         expect(output, contains('[bold]'));
+
+        // Verify font styling was applied
+        expect(find.byType(RichText), findsWidgets);
       });
 
       testWidgets('color + background-color combined', (tester) async {
@@ -58,18 +67,21 @@ void main() {
         final output = getSerializedOutput(tester);
         expect(output, contains('underlined'));
         expect(output, contains('[underline]'));
+        expect(find.byType(RichText), findsWidgets);
       });
 
       testWidgets('text-decoration: line-through', (tester) async {
         await pumpMarkdown(tester, '<span style="text-decoration:line-through">strikethrough</span>');
         final output = getSerializedOutput(tester);
         expect(output, contains('strikethrough'));
+        expect(find.byType(RichText), findsWidgets);
       });
 
       testWidgets('text-decoration: overline', (tester) async {
         await pumpMarkdown(tester, '<span style="text-decoration:overline">overlined</span>');
         final output = getSerializedOutput(tester);
         expect(output, contains('overlined'));
+        expect(find.byType(RichText), findsWidgets);
       });
     });
 
@@ -150,18 +162,21 @@ void main() {
         await pumpMarkdown(tester, '<span style="font-size:20px">large</span>');
         final output = getSerializedOutput(tester);
         expect(output, contains('large'));
+        expect(find.byType(RichText), findsWidgets);
       });
 
       testWidgets('font-size without unit', (tester) async {
         await pumpMarkdown(tester, '<span style="font-size:18">sized</span>');
         final output = getSerializedOutput(tester);
         expect(output, contains('sized'));
+        expect(find.byType(RichText), findsWidgets);
       });
 
       testWidgets('font-size with em unit', (tester) async {
         await pumpMarkdown(tester, '<span style="font-size:1.5em">big</span>');
         final output = getSerializedOutput(tester);
         expect(output, contains('big'));
+        expect(find.byType(RichText), findsWidgets);
       });
     });
 
