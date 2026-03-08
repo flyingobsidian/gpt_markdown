@@ -28,6 +28,7 @@ abstract class MarkdownComponent {
     LatexMath(),
     LatexMathMultiLine(),
     HighlightedText(),
+    EmojiMd(),
     SourceTag(),
   ];
 
@@ -776,6 +777,35 @@ class SourceTag extends InlineMd {
             ),
       ),
     );
+  }
+}
+
+/// Emoji component
+/// Converts `:emoji_name:` to emoji characters (e.g., `:smile:` → 😊)
+/// Unknown emoji names are preserved as-is (e.g., `:unknown:` → `:unknown:`)
+/// Supports emoji names with letters, digits, underscores, and +/- characters
+class EmojiMd extends InlineMd {
+  @override
+  RegExp get exp => RegExp(r':[a-zA-Z0-9_+\-]+:');
+
+  @override
+  InlineSpan span(
+    BuildContext context,
+    String text,
+    final GptMarkdownConfig config,
+  ) {
+    final match = exp.firstMatch(text.trim());
+    if (match == null) {
+      return const TextSpan();
+    }
+
+    // Extract emoji name without colons
+    final emojiName = text.trim().substring(1, text.trim().length - 1);
+
+    // Look up emoji in map, fallback to original text if not found
+    final emoji = emojiMap[emojiName] ?? text.trim();
+
+    return TextSpan(text: emoji, style: config.style);
   }
 }
 

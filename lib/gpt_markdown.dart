@@ -13,6 +13,7 @@ import 'dart:math';
 import 'custom_widgets/code_field.dart';
 import 'custom_widgets/indent_widget.dart';
 import 'custom_widgets/link_button.dart';
+import 'utils/emoji_map.dart';
 
 part 'theme.dart';
 part 'markdown_component.dart';
