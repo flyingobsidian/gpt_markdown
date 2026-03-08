@@ -62,10 +62,9 @@ Use the `rewards card` for discounts.
 
     testWidgets('contains all heading levels', (tester) async {
       await pumpMarkdown(tester, complexDocument);
-      final output = getSerializedOutput(tester);
 
       // Document has h1, h2, h3 headings
-      // They should all render (even if serialized differently)
+      // They should all render as RichText widgets
       expect(find.byType(RichText), findsWidgets);
     });
 
