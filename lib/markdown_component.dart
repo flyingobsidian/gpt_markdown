@@ -28,6 +28,8 @@ abstract class MarkdownComponent {
     LatexMath(),
     LatexMathMultiLine(),
     HighlightedText(),
+    CheckBoxInlineMd(),
+    RadioButtonInlineMd(),
     EmojiMd(),
     SourceTag(),
   ];
@@ -277,6 +279,70 @@ class HrLine extends BlockMd {
     return CustomDivider(
       height: thickness,
       color: config.style?.color ?? color,
+    );
+  }
+}
+
+/// Inline checkbox component
+/// Matches [x] or [ ] anywhere in inline text
+class CheckBoxInlineMd extends InlineMd {
+  @override
+  RegExp get exp => RegExp(r'\[([ xX])\]');
+
+  @override
+  InlineSpan span(
+    BuildContext context,
+    String text,
+    final GptMarkdownConfig config,
+  ) {
+    var match = this.exp.firstMatch(text.trim());
+    if (match == null) {
+      return const TextSpan();
+    }
+
+    final isChecked = match[1]?.toLowerCase() == 'x';
+    final widget = CustomCb(
+      value: isChecked,
+      textDirection: config.textDirection,
+      child: const SizedBox.shrink(),
+    );
+
+    return WidgetSpan(
+      child: widget,
+      alignment: PlaceholderAlignment.baseline,
+      baseline: TextBaseline.alphabetic,
+    );
+  }
+}
+
+/// Inline radio button component
+/// Matches (x) or ( ) anywhere in inline text
+class RadioButtonInlineMd extends InlineMd {
+  @override
+  RegExp get exp => RegExp(r'\(([ xX])\)');
+
+  @override
+  InlineSpan span(
+    BuildContext context,
+    String text,
+    final GptMarkdownConfig config,
+  ) {
+    var match = this.exp.firstMatch(text.trim());
+    if (match == null) {
+      return const TextSpan();
+    }
+
+    final isChecked = match[1]?.toLowerCase() == 'x';
+    final widget = CustomRb(
+      value: isChecked,
+      textDirection: config.textDirection,
+      child: const SizedBox.shrink(),
+    );
+
+    return WidgetSpan(
+      child: widget,
+      alignment: PlaceholderAlignment.baseline,
+      baseline: TextBaseline.alphabetic,
     );
   }
 }
