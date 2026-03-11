@@ -30,6 +30,7 @@ abstract class MarkdownComponent {
     HighlightedText(),
     CheckBoxInlineMd(),
     RadioButtonInlineMd(),
+    SpanTagMd(),
     EmojiMd(),
     SourceTag(),
   ];
@@ -344,6 +345,283 @@ class RadioButtonInlineMd extends InlineMd {
       alignment: PlaceholderAlignment.baseline,
       baseline: TextBaseline.alphabetic,
     );
+  }
+}
+
+/// HTML SPAN tag component with inline CSS styles
+/// Supports: <span style="color: red; font-weight: bold;">text</span>
+/// CSS properties: color, background-color, font-weight, font-style, text-decoration, font-size
+class SpanTagMd extends InlineMd {
+  static const String _spanPattern =
+      r'<span\s+style="([^"]*)">(.+?)</span>';
+
+  @override
+  RegExp get exp => RegExp(_spanPattern, caseSensitive: false, dotAll: true);
+
+  @override
+  InlineSpan span(
+    BuildContext context,
+    String text,
+    final GptMarkdownConfig config,
+  ) {
+    var match = exp.firstMatch(text.trim());
+    if (match == null) {
+      return const TextSpan();
+    }
+
+    final styleStr = match.group(1) ?? "";
+    final content = match.group(2) ?? "";
+
+    // Parse CSS style string and apply to config
+    final parsedStyle = _parseStyleAttribute(styleStr);
+    final mergedStyle = _mergeStyles(config.style, parsedStyle);
+
+    final newConfig = config.copyWith(style: mergedStyle);
+
+    // Recursive generation allows nested formatting
+    return TextSpan(
+      children: MarkdownComponent.generate(context, content, newConfig, false),
+      style: mergedStyle,
+    );
+  }
+
+  /// Parse CSS style attribute into Flutter TextStyle
+  /// Gracefully ignores invalid properties
+  TextStyle _parseStyleAttribute(String styleStr) {
+    final properties = <String, String>{};
+
+    // Split by semicolon and parse each property
+    final parts = styleStr.split(';');
+    for (final part in parts) {
+      final trimmed = part.trim();
+      if (trimmed.isEmpty) continue;
+
+      final colonIndex = trimmed.indexOf(':');
+      if (colonIndex == -1) continue;
+
+      final prop = trimmed.substring(0, colonIndex).trim().toLowerCase();
+      final value = trimmed.substring(colonIndex + 1).trim();
+
+      properties[prop] = value;
+    }
+
+    // Build TextStyle from properties
+    var builder = <String, dynamic>{};
+
+    if (properties.containsKey('color')) {
+      final color = _parseColor(properties['color']!);
+      if (color != null) builder['color'] = color;
+    }
+
+    if (properties.containsKey('background-color')) {
+      final bgColor = _parseColor(properties['background-color']!);
+      if (bgColor != null) builder['backgroundColor'] = bgColor;
+    }
+
+    if (properties.containsKey('font-weight')) {
+      final weight = _parseFontWeight(properties['font-weight']!);
+      if (weight != null) builder['fontWeight'] = weight;
+    }
+
+    if (properties.containsKey('font-style')) {
+      final style = _parseFontStyle(properties['font-style']!);
+      if (style != null) builder['fontStyle'] = style;
+    }
+
+    if (properties.containsKey('text-decoration')) {
+      final decoration = _parseTextDecoration(properties['text-decoration']!);
+      if (decoration != null) builder['decoration'] = decoration;
+    }
+
+    if (properties.containsKey('font-size')) {
+      final size = _parseFontSize(properties['font-size']!);
+      if (size != null) builder['fontSize'] = size;
+    }
+
+    // Return TextStyle with applied properties
+    if (builder.isEmpty) return const TextStyle();
+
+    return TextStyle(
+      color: builder['color'] as Color?,
+      backgroundColor: builder['backgroundColor'] as Color?,
+      fontWeight: builder['fontWeight'] as FontWeight?,
+      fontStyle: builder['fontStyle'] as FontStyle?,
+      decoration: builder['decoration'] as TextDecoration?,
+      fontSize: builder['fontSize'] as double?,
+    );
+  }
+
+  /// Merge base style with parsed style, with parsed taking precedence
+  TextStyle _mergeStyles(TextStyle? base, TextStyle? parsed) {
+    if (parsed == null || parsed == const TextStyle()) {
+      return base ?? const TextStyle();
+    }
+    if (base == null) return parsed;
+
+    return base.copyWith(
+      color: parsed.color ?? base.color,
+      backgroundColor: parsed.backgroundColor ?? base.backgroundColor,
+      fontWeight: parsed.fontWeight ?? base.fontWeight,
+      fontStyle: parsed.fontStyle ?? base.fontStyle,
+      decoration: parsed.decoration ?? base.decoration,
+      fontSize: parsed.fontSize ?? base.fontSize,
+    );
+  }
+
+  /// Parse color from string: #RRGGBB, #RGB, #RRGGBBAA, or named colors
+  Color? _parseColor(String colorStr) {
+    final trimmed = colorStr.trim().toLowerCase();
+
+    // Hex color: #RRGGBB or #RGB or #RRGGBBAA
+    if (trimmed.startsWith('#')) {
+      final hex = trimmed.substring(1);
+
+      try {
+        if (hex.length == 6) {
+          // #RRGGBB format
+          return Color(int.parse('FF$hex', radix: 16));
+        } else if (hex.length == 8) {
+          // #RRGGBBAA format
+          return Color(int.parse(hex, radix: 16));
+        } else if (hex.length == 3) {
+          // #RGB format - expand to #RRGGBB
+          final expanded = hex.split('').map((c) => '$c$c').join();
+          return Color(int.parse('FF$expanded', radix: 16));
+        }
+      } catch (e) {
+        // Invalid hex, return null
+        return null;
+      }
+    }
+
+    // Named colors - common web colors
+    const namedColors = <String, int>{
+      'red': 0xFFFF0000,
+      'green': 0xFF008000,
+      'blue': 0xFF0000FF,
+      'white': 0xFFFFFFFF,
+      'black': 0xFF000000,
+      'gray': 0xFF808080,
+      'grey': 0xFF808080,
+      'yellow': 0xFFFFFF00,
+      'orange': 0xFFFFA500,
+      'purple': 0xFF800080,
+      'pink': 0xFFFFC0CB,
+      'brown': 0xFFA52A2A,
+      'cyan': 0xFF00FFFF,
+      'magenta': 0xFFFF00FF,
+      'lime': 0xFF00FF00,
+      'navy': 0xFF000080,
+      'teal': 0xFF008080,
+      'olive': 0xFF808000,
+      'maroon': 0xFF800000,
+      'aqua': 0xFF00FFFF,
+      'silver': 0xFFC0C0C0,
+      'gold': 0xFFFFD700,
+      'indigo': 0xFF4B0082,
+      'violet': 0xFFEE82EE,
+      'turquoise': 0xFF40E0D0,
+      'khaki': 0xFFF0E68C,
+      'coral': 0xFFFF7F50,
+      'salmon': 0xFFFA8072,
+      'tomato': 0xFFFF6347,
+      'lightgray': 0xFFD3D3D3,
+      'lightgrey': 0xFFD3D3D3,
+      'darkgray': 0xFFA9A9A9,
+      'darkgrey': 0xFFA9A9A9,
+    };
+
+    if (namedColors.containsKey(trimmed)) {
+      return Color(namedColors[trimmed]!);
+    }
+
+    return null;
+  }
+
+  /// Parse font-weight: normal, bold, w100-w900
+  FontWeight? _parseFontWeight(String value) {
+    final trimmed = value.trim().toLowerCase();
+
+    switch (trimmed) {
+      case 'normal':
+        return FontWeight.normal;
+      case 'bold':
+        return FontWeight.bold;
+      case 'w100':
+        return FontWeight.w100;
+      case 'w200':
+        return FontWeight.w200;
+      case 'w300':
+        return FontWeight.w300;
+      case 'w400':
+        return FontWeight.w400;
+      case 'w500':
+        return FontWeight.w500;
+      case 'w600':
+        return FontWeight.w600;
+      case 'w700':
+        return FontWeight.w700;
+      case 'w800':
+        return FontWeight.w800;
+      case 'w900':
+        return FontWeight.w900;
+      default:
+        return null;
+    }
+  }
+
+  /// Parse font-style: normal, italic
+  FontStyle? _parseFontStyle(String value) {
+    final trimmed = value.trim().toLowerCase();
+
+    switch (trimmed) {
+      case 'normal':
+        return FontStyle.normal;
+      case 'italic':
+        return FontStyle.italic;
+      default:
+        return null;
+    }
+  }
+
+  /// Parse text-decoration: underline, overline, line-through
+  TextDecoration? _parseTextDecoration(String value) {
+    final trimmed = value.trim().toLowerCase();
+
+    switch (trimmed) {
+      case 'none':
+        return TextDecoration.none;
+      case 'underline':
+        return TextDecoration.underline;
+      case 'overline':
+        return TextDecoration.overline;
+      case 'line-through':
+        return TextDecoration.lineThrough;
+      default:
+        return null;
+    }
+  }
+
+  /// Parse font-size: 16px, 1.5em, 120%, etc.
+  double? _parseFontSize(String value) {
+    final trimmed = value.trim();
+
+    // Try to parse numeric value with unit
+    RegExp sizePattern = RegExp(r'^([\d.]+)(px|em|rem|%)?$');
+    final match = sizePattern.firstMatch(trimmed);
+
+    if (match == null) return null;
+
+    try {
+      final numStr = match.group(1)!;
+      final num = double.parse(numStr);
+
+      // For now, treat em, rem, % as pixels (simplified)
+      // In a real implementation, would need base font size context
+      return num;
+    } catch (e) {
+      return null;
+    }
   }
 }
 
